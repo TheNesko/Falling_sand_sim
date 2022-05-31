@@ -53,7 +53,7 @@ class Button(UI):
             pygame.draw.rect(Screen,self.color,self.rect)
             if self.border > 0:
                 pygame.draw.rect(Screen,(0,0,0),self.border_rect,self.border)
-            self.img = self.font1.render(self.text, True, self.text_color)
+            self.img = self.font1.render(str(self.text), True, self.text_color)
             img_rect = self.img.get_rect(center=self.rect.center)
             Screen.blit(self.img,img_rect)
 
