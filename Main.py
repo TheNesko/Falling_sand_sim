@@ -1,4 +1,5 @@
 import pygame, math
+import CursedUtils as cu
 from math import floor
 from pygame.locals import *
 
@@ -91,12 +92,12 @@ class Grid():
     def get_world_position(self,position):
         if position[0] >= 0 and position[0] <= self.width and position[1] >= 0 and position[1] <= self.height:
             return math.floor(position[0]*self.cell_size), math.floor(position[1]*self.cell_size)
-    
+
 class Cell():
 
     list_of_cells = []
 
-    def __init__(self,grid:Grid,position,size,color,life_time,velocity,fluid=False) -> None:
+    def __init__(self,grid:Grid,position,size,color,life_time,velocity,fluid) -> None:
         self.x = position[0]
         self.y = position[1]
         self.surface = pygame.Surface((size,size))
@@ -107,21 +108,26 @@ class Cell():
         self.velocity = velocity
         self.fluid = fluid
         self.grid = grid
+        self.surface.fill(self.color)
         Cell.list_of_cells.append(self)
 
     def update(self):
         pass
     
     def draw(self):
-        self.surface.fill(self.color)
+        
         screen.blit(self.surface,self.rect)
     
     def free(self):
         Cell.list_of_cells.remove(self)
         del(self)
 
+class Static_Cell(Cell):
+    def __init__(self, grid: Grid, position, size, color) -> None:
+        super().__init__(grid, position, size, color)
+
 class Sand(Cell):
-    def __init__(self, grid: Grid, position, size, color, life_time, velocity, fluid=False) -> None:
+    def __init__(self, grid: Grid, position, size, color=(250,250,0), life_time=-1, velocity=1, fluid=False) -> None:
         super().__init__(grid, position, size, color, life_time, velocity, fluid)
 
     def update(self):
@@ -200,7 +206,7 @@ class Sand(Cell):
                 return
 
 class Water(Cell):
-    def __init__(self, grid: Grid, position, size, color, life_time, velocity=2, fluid=True) -> None:
+    def __init__(self, grid: Grid, position, size, color=(0,0,170), life_time=-1, velocity=2, fluid=True) -> None:
         super().__init__(grid, position, size, color, life_time, velocity, fluid)
     
     def update(self):
@@ -248,40 +254,12 @@ class Water(Cell):
             self.y = closest[1]*self.grid.cell_size
             return
 
-        # if self.grid.grid[current_pos[0]][current_pos[1]+1] == None:
-        #     self.grid.swap_grid_cells(current_pos,bottom)
-        #     self.x = current_pos[0]*self.grid.cell_size
-        #     self.y = (current_pos[1]+1)*self.grid.cell_size
-
-        # elif self.grid.grid[current_pos[0]-1][current_pos[1]+1] == None and self.grid.grid[current_pos[0]-1][current_pos[1]] == None:
-        #     self.grid.swap_grid_cells(current_pos,bottom_left)
-        #     self.x = (current_pos[0]-1)*self.grid.cell_size
-        #     self.y = (current_pos[1]+1)*self.grid.cell_size
-
-        # elif self.grid.grid[current_pos[0]+1][current_pos[1]+1] == None and self.grid.grid[current_pos[0]+1][current_pos[1]] == None:
-        #     self.grid.swap_grid_cells(current_pos,bottom_right)
-        #     self.x = (current_pos[0]+1)*self.grid.cell_size
-        #     self.y = (current_pos[1]+1)*self.grid.cell_size
-
-        # elif self.grid.grid[current_pos[0]-1][current_pos[1]] == None:
-        #     self.grid.swap_grid_cells(current_pos,left)
-        #     self.x = (current_pos[0]-1)*self.grid.cell_size
-        #     self.y = (current_pos[1])*self.grid.cell_size
-
-        # elif self.grid.grid[current_pos[0]+1][current_pos[1]] == None:
-        #     self.grid.swap_grid_cells(current_pos,right)
-        #     self.x = (current_pos[0]+1)*self.grid.cell_size
-        #     self.y = (current_pos[1])*self.grid.cell_size
-
 class Wood(Cell):
-    def __init__(self, grid: Grid, position, size, color, life_time, velocity, fluid=False) -> None:
+    def __init__(self, grid: Grid, position, size, color=(102, 58, 13), life_time=-1, velocity=0, fluid=False) -> None:
         super().__init__(grid, position, size, color, life_time, velocity, fluid)
-    
-    def update(self):
-        pass
 
 class Border(Cell):
-    def __init__(self, grid: Grid, position, size, color, life_time, velocity, fluid=False) -> None:
+    def __init__(self, grid: Grid, position, size, color=(20,20,20), life_time=-1, velocity=0, fluid=False) -> None:
         super().__init__(grid, position, size, color, life_time, velocity, fluid)
     
     def update(self):
@@ -290,15 +268,19 @@ class Border(Cell):
 def main():
     Clock = pygame.time.Clock()
 
-    is_paused = False
+    sand_button = cu.Button((WIDTH-60,50),(40,40),(250,250,0),"Sand",(0,0,0),20,border=2)
+    water_button = cu.Button((WIDTH-60,100),(40,40),(0,0,170),"water",(0,0,0),20,border=2)
+    wood_button = cu.Button((WIDTH-60,150),(40,40),(102, 58, 13),"wood",(0,0,0),20,border=2)
+
 
     brush_size = 5  # TODO ADD DRAWING MORE CELLS WITH A BRUSH SIZE
-    current_type = "S"
+    current_type = Sand
 
-    grid = Grid(WIDTH,HEIGHT,5)
+    grid = Grid(WIDTH,HEIGHT,10)
     grid.generate_grid()
     grid.generate_borders(2)
     
+    is_paused = False
     is_running = True
     while is_running:
         for event in pygame.event.get():
@@ -307,40 +289,36 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     is_paused = not is_paused
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if pygame.mouse.get_pressed()[0]:
+                    cu.events.append(cu.MOUSE_LEFT)
             if event.type == pygame.MOUSEWHEEL:
                 brush_size += event.y
                 if brush_size < 1: brush_size = 1
                 if brush_size > 50: brush_size = 50
                 
         screen.fill((50,50,50))
-        delta = Clock.tick(60)/1000
+        delta = Clock.tick(100)/1000
 
-        if pygame.key.get_pressed()[pygame.K_1]:
-            current_type = "S"
-        if pygame.key.get_pressed()[pygame.K_2]:
-            current_type = "W"
-        if pygame.key.get_pressed()[pygame.K_3]:
-            current_type = "WO"
+        if pygame.key.get_pressed()[pygame.K_1] or sand_button.is_pressed:
+            current_type = Sand
+        if pygame.key.get_pressed()[pygame.K_2] or water_button.is_pressed:
+            current_type = Water
+        if pygame.key.get_pressed()[pygame.K_3] or wood_button.is_pressed:
+            current_type = Wood
         
         mouse = pygame.mouse.get_pos()
-        if pygame.mouse.get_pressed()[0]:
+        if pygame.mouse.get_pressed()[0] and not cu.UI.is_over_ui:
             pos = grid.get_grid_position(mouse)
             for x in range(brush_size):
                 for y in range(brush_size):
                     grid_cell = (pos[0]+x-floor(brush_size/2),pos[1]+y-floor(brush_size/2))
                     if grid_cell[0] < 0 or grid_cell[0] > len(grid.grid)-1 or grid_cell[1] < 0 or grid_cell[1] > len(grid.grid[0])-1: continue
                     if grid.grid[grid_cell[0]][grid_cell[1]] == None :
-                        if current_type == "S":
-                            cel = Sand(grid,(grid_cell[0]*grid.cell_size,grid_cell[1]*grid.cell_size),grid.cell_size,(250,250,0),-1,1)
-                            grid.grid[grid_cell[0]][grid_cell[1]] = cel
-                        elif current_type == "W":
-                            cel = Water(grid,(grid_cell[0]*grid.cell_size,grid_cell[1]*grid.cell_size),grid.cell_size,(0,0,170),-1,2)
-                            grid.grid[grid_cell[0]][grid_cell[1]] = cel
-                        elif current_type == "WO":
-                            cel = Wood(grid,(grid_cell[0]*grid.cell_size,grid_cell[1]*grid.cell_size),grid.cell_size,(102, 58, 13),-1,1)
-                            grid.grid[grid_cell[0]][grid_cell[1]] = cel
-        
-        if pygame.mouse.get_pressed()[2]:
+                        cel = current_type(grid,(grid_cell[0]*grid.cell_size,grid_cell[1]*grid.cell_size),grid.cell_size)
+                        grid.grid[grid_cell[0]][grid_cell[1]] = cel
+
+        if pygame.mouse.get_pressed()[2] and not cu.UI.is_over_ui:
             pos = grid.get_grid_position(mouse)
             for x in range(brush_size):
                 for y in range(brush_size):
@@ -350,6 +328,7 @@ def main():
                         grid.grid[grid_cell[0]][grid_cell[1]].free()
                         grid.grid[grid_cell[0]][grid_cell[1]] = None
 
+        cu.update()
         for cell in reversed(Cell.list_of_cells):
             if not is_paused:
                 cell.update()
@@ -362,7 +341,7 @@ def main():
         pygame.draw.rect(screen,(255,0,0),(placement_preview_position[0]*grid.cell_size,placement_preview_position[1]*grid.cell_size,brush_size*grid.cell_size,brush_size*grid.cell_size),3)
 
         #grid.draw_grid_lines()
-
+        cu.draw(screen)
         pygame.display.flip()
     pygame.quit()
 
