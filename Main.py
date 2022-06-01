@@ -1,3 +1,4 @@
+from concurrent.futures import thread
 import pygame, math
 import CursedUtils as cu
 from math import floor
@@ -31,10 +32,11 @@ class Grid():
         self.is_finished = True
     
     def update_cells(self,start_range,end_range):
-        for x in range(start_range,end_range):
-            for cell in self.grid[x]:
+        for index,_ in enumerate(self.grid,start_range):
+            for cell in self.grid[index]:
                 if cell != None:
                     cell.update()
+            if index == end_range: break
     
     def generate_borders(self,size):
         for s in range(size-1):
@@ -51,9 +53,9 @@ class Grid():
 
     def draw_grid_lines(self):
         for x in range(self.width+1):
-            pygame.draw.line(screen,(255,255,255),(x*self.cell_size,0),(x*self.cell_size,self.height*self.cell_size))
+            pygame.draw.line(screen,(30,30,30),(x*self.cell_size,0),(x*self.cell_size,self.height*self.cell_size))
         for y in range(self.height+1):
-            pygame.draw.line(screen,(255,255,255),(0,y*self.cell_size),(self.width*self.cell_size,y*self.cell_size))
+            pygame.draw.line(screen,(30,30,30),(0,y*self.cell_size),(self.width*self.cell_size,y*self.cell_size))
 
     def swap_grid_cells(self,grid_cell,target_grid_cell):
         temp = self.grid[target_grid_cell[0]][target_grid_cell[1]]
@@ -334,6 +336,7 @@ def main():
 
     previous_mouse_pos = None
 
+    show_grid_lines = True
     is_paused = False
     is_running = True
     while is_running:
@@ -344,6 +347,8 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     is_paused = not is_paused
+                if event.key == pygame.K_q:
+                    show_grid_lines = not show_grid_lines
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if pygame.mouse.get_pressed()[0]:
                     cu.events.append(cu.MOUSE_LEFT)
@@ -383,10 +388,15 @@ def main():
                 for y in range(brush_size):
                     grid_cell = (pos[0]+x-floor(brush_size/2),pos[1]+y-floor(brush_size/2))
                     if grid_cell[0] < 0 or grid_cell[0] > len(grid.grid)-1 or grid_cell[1] < 0 or grid_cell[1] > len(grid.grid[0])-1: continue
-                    if grid.grid[grid_cell[0]][grid_cell[1]] != None and type((grid.grid[grid_cell[0]][grid_cell[1]])) != Border:
-                        grid.grid[grid_cell[0]][grid_cell[1]].free()
-                        grid.grid[grid_cell[0]][grid_cell[1]] = None
-        
+                    positions = Grid.traverse_matrix((previous_mouse_pos[0]+x-floor(brush_size/2),previous_mouse_pos[1]+y-floor(brush_size/2)),grid_cell)
+                    if positions == None: positions = [grid_cell]
+                    for position in positions:
+                        if position[0] < 0 or position[0] > len(grid.grid)-1 or position[1] < 0 or position[1] > len(grid.grid[0])-1: continue
+                        if grid.grid[position[0]][position[1]] != None and type((grid.grid[position[0]][position[1]])) != Border:
+                            grid.grid[position[0]][position[1]].free()
+                            grid.grid[position[0]][position[1]] = None
+
+
         cu.update()
         if not is_paused:
             Cell.update_all()
@@ -396,7 +406,9 @@ def main():
         placement_preview_grid = grid.get_grid_position((mouse[0],mouse[1]))
         placement_preview_position = (placement_preview_grid[0]-preview_offset[0],placement_preview_grid[1]-preview_offset[1])
         pygame.draw.rect(screen,(255,0,0),(placement_preview_position[0]*grid.cell_size,placement_preview_position[1]*grid.cell_size,brush_size*grid.cell_size,brush_size*grid.cell_size),3)
-        #grid.draw_grid_lines()
+
+        if show_grid_lines:
+            grid.draw_grid_lines()
         cu.draw(screen)
         pygame.display.flip()
         print(f'game loop-{round(delta*1000, 3)} ms    ammount of cells-{len(Cell.list_of_cells)}')
