@@ -1,8 +1,6 @@
-from concurrent.futures import thread
 import pygame, math
 import CursedUtils as cu
 from math import floor
-from threading import Thread
 from pygame.locals import *
 
 pygame.init()
