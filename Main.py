@@ -334,7 +334,7 @@ def main():
 
     previous_mouse_pos = None
 
-    show_grid_lines = True
+    show_grid_lines = False
     is_paused = False
     is_running = True
     while is_running:
@@ -345,7 +345,7 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     is_paused = not is_paused
-                if event.key == pygame.K_q:
+                if event.key == pygame.K_TAB:
                     show_grid_lines = not show_grid_lines
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if pygame.mouse.get_pressed()[0]:
@@ -409,7 +409,7 @@ def main():
             grid.draw_grid_lines()
         cu.draw(screen)
         pygame.display.flip()
-        print(f'game loop-{round(delta*1000, 3)} ms    ammount of cells-{len(Cell.list_of_cells)}')
+        # print(f'game loop-{round(delta*1000, 3)} ms    ammount of cells-{len(Cell.list_of_cells)}')
         fps_button.text = round(1000/(delta*1000))
     pygame.quit()
 
